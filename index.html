@@ -1,169 +1,199 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#102b2a">
-  <title>CI/CD Pipeline Demo</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --ink: #eaf4eb;
-      --muted: #a9c0b3;
-      --ground: #102b2a;
-      --panel: #193b37;
-      --line: #365b50;
-      --lime: #c7ed78;
-      --coral: #ff9878;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background-color: var(--ground);
-      background-image: radial-gradient(#426758 0.7px, transparent 0.7px);
-      background-size: 22px 22px;
-      color: var(--ink);
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-    }
-
-    main {
-      width: min(1040px, calc(100% - 40px));
-      margin: 0 auto;
-      padding: 64px 0 48px;
-    }
-
-    .eyebrow {
-      color: var(--lime);
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      max-width: 720px;
-      margin: 18px 0 12px;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(2.6rem, 7vw, 5.4rem);
-      font-weight: 400;
-      line-height: 0.98;
-    }
-
-    .intro {
-      max-width: 610px;
-      margin: 20px 0 40px;
-      color: var(--muted);
-      font-size: 1.08rem;
-      line-height: 1.65;
-    }
-
-    .pipeline {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-    }
-
-    .stage {
-      position: relative;
-      min-height: 210px;
-      padding: 24px 20px 24px 0;
-    }
-
-    .stage + .stage {
-      padding-left: 20px;
-      border-left: 1px solid var(--line);
-    }
-
-    .number {
-      color: var(--lime);
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 2.3rem;
-    }
-
-    h2 {
-      margin: 22px 0 9px;
-      font-size: 1.05rem;
-    }
-
-    .stage p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.55;
-    }
-
-    .footer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 26px;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    .pulse {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: var(--coral);
-      box-shadow: 0 0 0 5px #ff987822;
-    }
-
-    @media (max-width: 680px) {
-      main { padding-top: 42px; }
-      .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stage { min-height: 190px; }
-      .stage:nth-child(3) { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
-      .stage:nth-child(4) { border-top: 1px solid var(--line); }
-    }
-
-    @media (max-width: 380px) {
-      .pipeline { grid-template-columns: 1fr; }
-      .stage, .stage + .stage, .stage:nth-child(3) {
-        min-height: auto;
-        padding: 20px 0;
-        border-left: 0;
-        border-top: 1px solid var(--line);
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102b2a" />
+    <title>CI/CD Pipeline Demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #eaf4eb;
+        --muted: #a9c0b3;
+        --ground: #102b2a;
+        --panel: #193b37;
+        --line: #365b50;
+        --lime: #c7ed78;
+        --coral: #ff9878;
       }
-      .stage:first-child { border-top: 0; }
-      h2 { margin-top: 12px; }
-    }
-  </style>
-</head>
-<body>
-  <main>
-    <div class="eyebrow">A small project with a full delivery loop</div>
-    <h1>CI/CD, made visible.</h1>
-    <p class="intro">Every change can travel from a code check to a running container through one repeatable automated pipeline.</p>
 
-    <section class="pipeline" aria-label="Pipeline stages">
-      <article class="stage">
-        <div class="number">01</div>
-        <h2>Lint</h2>
-        <p>Catch formatting and code issues before the image is built.</p>
-      </article>
-      <article class="stage">
-        <div class="number">02</div>
-        <h2>Build</h2>
-        <p>Package this page into a small, unprivileged Nginx container.</p>
-      </article>
-      <article class="stage">
-        <div class="number">03</div>
-        <h2>Scan</h2>
-        <p>Check the image for high and critical vulnerabilities with Trivy.</p>
-      </article>
-      <article class="stage">
-        <div class="number">04</div>
-        <h2>Deploy</h2>
-        <p>Publish to GHCR, then roll out to Kubernetes when enabled.</p>
-      </article>
-    </section>
+      * {
+        box-sizing: border-box;
+      }
 
-    <div class="footer"><span class="pulse" aria-hidden="true"></span>Demo app is running in a container.</div>
-  </main>
-</body>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background-color: var(--ground);
+        background-image: radial-gradient(#426758 0.7px, transparent 0.7px);
+        background-size: 22px 22px;
+        color: var(--ink);
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(1040px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 64px 0 48px;
+      }
+
+      .eyebrow {
+        color: var(--lime);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 18px 0 12px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.6rem, 7vw, 5.4rem);
+        font-weight: 400;
+        line-height: 0.98;
+      }
+
+      .intro {
+        max-width: 610px;
+        margin: 20px 0 40px;
+        color: var(--muted);
+        font-size: 1.08rem;
+        line-height: 1.65;
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stage {
+        position: relative;
+        min-height: 210px;
+        padding: 24px 20px 24px 0;
+      }
+
+      .stage + .stage {
+        padding-left: 20px;
+        border-left: 1px solid var(--line);
+      }
+
+      .number {
+        color: var(--lime);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 2.3rem;
+      }
+
+      h2 {
+        margin: 22px 0 9px;
+        font-size: 1.05rem;
+      }
+
+      .stage p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .footer {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .pulse {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--coral);
+        box-shadow: 0 0 0 5px #ff987822;
+      }
+
+      @media (max-width: 680px) {
+        main {
+          padding-top: 42px;
+        }
+        .pipeline {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .stage {
+          min-height: 190px;
+        }
+        .stage:nth-child(3) {
+          padding-left: 0;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+        .stage:nth-child(4) {
+          border-top: 1px solid var(--line);
+        }
+      }
+
+      @media (max-width: 380px) {
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+        .stage,
+        .stage + .stage,
+        .stage:nth-child(3) {
+          min-height: auto;
+          padding: 20px 0;
+          border-left: 0;
+          border-top: 1px solid var(--line);
+        }
+        .stage:first-child {
+          border-top: 0;
+        }
+        h2 {
+          margin-top: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">A small project with a full delivery loop</div>
+      <h1>CI/CD, made visible.</h1>
+      <p class="intro">
+        Every change can travel from a code check to a running container through
+        one repeatable automated pipeline.
+      </p>
+
+      <section class="pipeline" aria-label="Pipeline stages">
+        <article class="stage">
+          <div class="number">01</div>
+          <h2>Lint</h2>
+          <p>Catch formatting and code issues before the image is built.</p>
+        </article>
+        <article class="stage">
+          <div class="number">02</div>
+          <h2>Build</h2>
+          <p>Package this page into a small, unprivileged Nginx container.</p>
+        </article>
+        <article class="stage">
+          <div class="number">03</div>
+          <h2>Scan</h2>
+          <p>
+            Check the image for high and critical vulnerabilities with Trivy.
+          </p>
+        </article>
+        <article class="stage">
+          <div class="number">04</div>
+          <h2>Deploy</h2>
+          <p>Publish to GHCR, then roll out to Kubernetes when enabled.</p>
+        </article>
+      </section>
+
+      <div class="footer">
+        <span class="pulse" aria-hidden="true"></span>Demo app is running in a
+        container.
+      </div>
+    </main>
+  </body>
 </html>

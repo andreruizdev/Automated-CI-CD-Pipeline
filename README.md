@@ -2,18 +2,42 @@
 
 ## CI/CD
 
-The GitHub Actions workflow in `.github/workflows/ci-cd.yml` lints the repository, builds and smoke-tests the demo container, and fails if Trivy finds fixable HIGH or CRITICAL vulnerabilities. Pull requests to `main` run these checks without publishing an image. Pushes to `main` publish the scanned image to GitHub Container Registry (GHCR). Kubernetes rollout is opt-in, so the demo pipeline can run without cluster credentials.
+The GitHub Actions workflow in `.github/workflows/ci-cd.yml` lints the repository,
+builds and smoke-tests the demo container, scans it with Trivy, then deploys it
+to a temporary `kind` cluster and tests the Service. It publishes to GitHub
+Container Registry (GHCR) only after these checks pass. Pull requests to `main`
+run the same checks without publishing. Deployment to a separate production
+cluster is opt-in.
 
 ### Repository setup
 
 - The included `Dockerfile` packages the static showcase page in an unprivileged Nginx image.
-- To enable Kubernetes deployment on pushes to `main`, set the Actions variable `DEPLOY_ENABLED` to `true`.
-- In repository **Settings > Secrets and variables > Actions**, add the `KUBE_CONFIG` secret containing the kubeconfig for the target cluster.
-- Add these Actions variables: `K8S_DEPLOYMENT` (existing Deployment name), `K8S_CONTAINER` (container name in that Deployment), and `K8S_NAMESPACE`.
+- To enable deployment on pushes to `main`, set the Actions variable `DEPLOY_ENABLED` to `true`.
+- In repository **Settings > Secrets and variables > Actions**, add the `KUBE_CONFIG` secret containing the kubeconfig for the target cluster. The identity needs permission to manage resources in the configured namespace.
 - Ensure the cluster can pull the GHCR image. For a private package, configure an image pull secret in the Deployment's namespace.
 - Configure the `production` environment in repository settings if deployment approval or environment-specific protection is required.
 
-The workflow deploys by changing the image on an existing Kubernetes Deployment; it does not create cluster resources. The container listens on port `8080`.
+The production overlay creates a namespace, Deployment, and ClusterIP Service.
+Customize `k8s/base` for shared resources and `k8s/overlays/production` for
+environment-specific image names, replica counts, or patches. The workflow
+overrides the production image tag with the commit SHA. The demo container
+listens on port `8080`.
+
+### Test Kubernetes locally
+
+Install Docker, `kubectl`, and `kind`, then run:
+
+```sh
+docker build -t pipeline-demo:local .
+kind create cluster --config k8s/kind/cluster.yaml
+kind load docker-image pipeline-demo:local --name automated-ci-cd
+kubectl apply -k k8s/overlays/local
+kubectl rollout status deployment/pipeline-demo \
+	--namespace pipeline-demo-local \
+	--timeout=120s
+```
+
+The local overlay exposes the app at `http://localhost:8081`. Clean up with `kind delete cluster --name automated-ci-cd`.
 
 ### Run the demo locally
 

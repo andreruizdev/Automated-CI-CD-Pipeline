@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pipeline-demo
+resources:
+  - ../../base
+replicas:
+  - name: pipeline-demo
+    count: 2
+images:
+  - name: pipeline-demo
+    newName: ghcr.io/andreruizdev/automated-ci-cd-pipeline
+    newTag: sha-placeholder
