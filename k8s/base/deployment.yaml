@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,6 +6,9 @@ metadata:
   namespace: pipeline-demo
   labels:
     app.kubernetes.io/name: pipeline-demo
+  annotations:
+    checkov.io/skip1: >-
+      CKV_K8S_43=Production injects the exact registry digest after the Trivy gate; this is a local base placeholder.
 spec:
   replicas: 1
   selector:
@@ -15,15 +19,18 @@ spec:
       labels:
         app.kubernetes.io/name: pipeline-demo
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: pipeline-demo
           image: pipeline-demo:local
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8080
@@ -48,6 +55,13 @@ spec:
               memory: 128Mi
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
+          volumeMounts:
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nginx-tmp
+          emptyDir: {}

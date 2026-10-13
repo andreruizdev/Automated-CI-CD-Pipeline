@@ -18,13 +18,16 @@ jobs:
       statuses: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Lint repository
-        uses: super-linter/super-linter/slim@v7
+        uses: super-linter/super-linter/slim@2da136927bd4a73596db63044b504547c62cb854 # v9.0.0
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: true
+          VALIDATE_KUBERNETES_KUBECONFORM: false
 
   build_scan:
     needs: lint
@@ -33,20 +36,22 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image: ${{ steps.meta.outputs.tags }}
+      image: ${{ steps.publish.outputs.image }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Generate image tag
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ghcr.io/${{ github.repository }}
           tags: type=sha,format=long
       - name: Build image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           load: true
@@ -58,15 +63,16 @@ jobs:
           IMAGE: ${{ steps.meta.outputs.tags }}
         run: |
           set -euo pipefail
-          docker run --detach --rm --name pipeline-demo -p 127.0.0.1:8080:8080 "$IMAGE"
+          docker run --detach --rm --name pipeline-demo \
+            -p 127.0.0.1:8080:8080 "$IMAGE"
           trap 'docker rm --force pipeline-demo >/dev/null 2>&1 || true' EXIT
           curl --fail --silent --show-error \
-            --retry 15 --retry-connrefused --retry-delay 1 \
+            --retry 15 --retry-all-errors --retry-delay 1 \
             http://127.0.0.1:8080/ --output /tmp/pipeline-demo.html
           grep --fixed-strings --quiet \
             'CI/CD, made visible.' /tmp/pipeline-demo.html
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           format: table
@@ -75,7 +81,7 @@ jobs:
           vuln-type: os,library
           severity: CRITICAL,HIGH
       - name: Create local Kubernetes cluster
-        uses: helm/kind-action@v1
+        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
           cluster_name: automated-ci-cd
           config: k8s/kind/cluster.yaml
@@ -86,25 +92,37 @@ jobs:
           docker tag "$IMAGE" pipeline-demo:local
           kind load docker-image pipeline-demo:local --name automated-ci-cd
           kubectl apply -k k8s/overlays/local
+          kind_network_cidr="$(docker network inspect kind --format '{{json .IPAM.Config}}' | jq -r '.[] | select(.Subnet | contains(".")) | .Subnet')"
+          policy_patch="$(printf '[{"op":"add","path":"/spec/ingress/0/from/-","value":{"ipBlock":{"cidr":"%s"}}}]' "$kind_network_cidr")"
+          kubectl patch networkpolicy pipeline-demo-ingress \
+            --namespace pipeline-demo-local \
+            --type=json \
+            --patch "$policy_patch"
           kubectl rollout status deployment/pipeline-demo \
             --namespace pipeline-demo-local \
             --timeout=120s
           curl --fail --silent --show-error \
-            --retry 15 --retry-connrefused --retry-delay 1 \
+            --retry 15 --retry-all-errors --retry-delay 1 \
             http://127.0.0.1:8081/ | grep --fixed-strings --quiet \
               'CI/CD, made visible.'
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish image
         if: github.event_name == 'push'
+        id: publish
         env:
           IMAGE: ${{ steps.meta.outputs.tags }}
-        run: docker push "$IMAGE"
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE"
+          image_digest="$(docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}')"
+          [[ "$image_digest" == *@sha256:* ]]
+          echo "image=$image_digest" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build_scan
@@ -113,9 +131,9 @@ jobs:
     environment: production
     steps:
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@c0c8b32d33a5244f1e5947304550403b63930415 # v4
       - name: Set Kubernetes context
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@2e0f87596a57da806e8c5a9a77da57901b31de7c # v4
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}

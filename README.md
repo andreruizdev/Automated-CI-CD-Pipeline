@@ -25,16 +25,17 @@ listens on port `8080`.
 
 ### Test Kubernetes locally
 
-Install Docker, `kubectl`, and `kind`, then run:
+Install Docker, `kubectl`, `kind`, and `jq`, then run:
 
 ```sh
 docker build -t pipeline-demo:local .
 kind create cluster --config k8s/kind/cluster.yaml
 kind load docker-image pipeline-demo:local --name automated-ci-cd
 kubectl apply -k k8s/overlays/local
-kubectl rollout status deployment/pipeline-demo \
-	--namespace pipeline-demo-local \
-	--timeout=120s
+kind_network_cidr="$(docker network inspect kind --format '{{json .IPAM.Config}}' | jq -r '.[] | select(.Subnet | contains(".")) | .Subnet')"
+policy_patch="$(printf '[{\"op\":\"add\",\"path\":\"/spec/ingress/0/from/-\",\"value\":{\"ipBlock\":{\"cidr\":\"%s\"}}}]' "$kind_network_cidr")"
+kubectl patch networkpolicy pipeline-demo-ingress --namespace pipeline-demo-local --type=json --patch "$policy_patch"
+kubectl rollout status deployment/pipeline-demo --namespace pipeline-demo-local --timeout=120s
 ```
 
 The local overlay exposes the app at `http://localhost:8081`. Clean up with `kind delete cluster --name automated-ci-cd`.

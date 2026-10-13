@@ -1,3 +1,4 @@
+---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: pipeline-demo-local
@@ -9,6 +10,24 @@ images:
     newTag: local
 patches:
   - target:
+      kind: Deployment
+      name: pipeline-demo
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: IfNotPresent
+  - target:
+      kind: Deployment
+      name: pipeline-demo
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: pipeline-demo
+        annotations:
+          checkov.io/skip2: >-
+            CKV_K8S_15=The local kind image is preloaded into the node, so it must not be pulled from a registry.
+  - target:
       kind: Service
       name: pipeline-demo
     patch: |-
@@ -18,3 +37,12 @@ patches:
       - op: add
         path: /spec/ports/0/nodePort
         value: 30080
+  - target:
+      group: networking.k8s.io
+      version: v1
+      kind: NetworkPolicy
+      name: pipeline-demo-ingress
+    patch: |-
+      - op: replace
+        path: /spec/ingress/0/from/0/namespaceSelector/matchLabels/kubernetes.io~1metadata.name
+        value: pipeline-demo-local
