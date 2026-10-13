@@ -132,9 +132,9 @@ jobs:
     environment: production
     steps:
       - name: Set up kubectl
-        uses: azure/setup-kubectl@c0c8b32d33a5244f1e5947304550403b63930415 # v4
+        uses: azure/setup-kubectl@c0c8b32d33a5244f1e5947304550403b63930415 # v4.0.1
       - name: Set Kubernetes context
-        uses: azure/k8s-set-context@2e0f87596a57da806e8c5a9a77da57901b31de7c # v4
+        uses: azure/k8s-set-context@2e0f87596a57da806e8c5a9a77da57901b31de7c # v4.0.2
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
